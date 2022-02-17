@@ -42,7 +42,19 @@ public class SiteDaoRedisImpl implements SiteDao {
     @Override
     public Set<Site> findAll() {
         // START Challenge #1
-        return Collections.emptySet();
+        try(Jedis jedis = jedisPool.getResource()) {
+            final Set<String> siteIds = jedis.smembers(RedisSchema.getSiteIDsKey());
+            Set<Site> sites = new HashSet<>();
+            if (!siteIds.isEmpty()) {
+                for (String siteId : siteIds) {
+                    sites.add(new Site(jedis.hgetAll(siteId)));
+                }
+
+                return sites;
+            } else {
+                return Collections.emptySet();
+            }
+        }
         // END Challenge #1
     }
 }
