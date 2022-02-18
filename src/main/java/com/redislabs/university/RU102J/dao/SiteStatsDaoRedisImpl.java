@@ -81,17 +81,18 @@ public class SiteStatsDaoRedisImpl implements SiteStatsDao {
     // Challenge #3
     private void updateOptimized(Jedis jedis, String key, MeterReading reading) {
         // START Challenge #3
-        final Transaction tx = jedis.multi();
-        String reportingTime = ZonedDateTime.now(ZoneOffset.UTC).toString();
-        tx.hset(key, SiteStats.reportingTimeField, reportingTime);
-        tx.hincrBy(key, SiteStats.countField, 1);
-        tx.expire(key, weekSeconds);
+        try(Transaction tx = jedis.multi()) {
+            String reportingTime = ZonedDateTime.now(ZoneOffset.UTC).toString();
+            tx.hset(key, SiteStats.reportingTimeField, reportingTime);
+            tx.hincrBy(key, SiteStats.countField, 1);
+            tx.expire(key, weekSeconds);
 
-        final CompareAndUpdateScript script = new CompareAndUpdateScript(jedisPool);
-        script.updateIfGreater(tx, key, SiteStats.maxWhField, reading.getWhGenerated());
-        script.updateIfLess(tx, key, SiteStats.minWhField, reading.getWhGenerated());
-        script.updateIfGreater(tx, key, SiteStats.maxCapacityField, getCurrentCapacity(reading));
-        tx.exec();
+            final CompareAndUpdateScript script = new CompareAndUpdateScript(jedisPool);
+            script.updateIfGreater(tx, key, SiteStats.maxWhField, reading.getWhGenerated());
+            script.updateIfLess(tx, key, SiteStats.minWhField, reading.getWhGenerated());
+            script.updateIfGreater(tx, key, SiteStats.maxCapacityField, getCurrentCapacity(reading));
+            tx.exec();
+        }
         // END Challenge #3
     }
 
